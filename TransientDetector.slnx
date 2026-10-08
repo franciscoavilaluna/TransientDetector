@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/Runtime/">
+    <Project Path="Runtime/AudioBeatDetector.csproj" />
+  </Folder>
+</Solution>
