@@ -3,5 +3,8 @@
   "version": "1.0.0",
   "displayName": "Audio Beat and Transient Detector",
   "description": "Libreria para deteccion de transients y BPM",
-  "unity": "2021.3"
+  "unity": "2021.3",
+  "author": {
+    "name": "Francisco Avila Luna",
+    "url": "https://github.com/franciscoavilaluna"
 }
