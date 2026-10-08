@@ -1,11 +1,7 @@
 {
-    "name": "com.franciscoavilaluna.transientdetector",
-    "version": "1.0.0",
-    "displayName": "Audio Beat & Transient Detector",
-    "description": "Tool in C# for transient detection",
-    "unity": "2021.3",
-    "author": {
-        "name": "Francisco Ávila Luna",
-        "url": "https://github.com/franciscoavilaluna/TransientDetector",
-    }
+  "name": "com.franciscoavilaluna.transientdetector",
+  "version": "1.0.0",
+  "displayName": "Audio Beat and Transient Detector",
+  "description": "Libreria para deteccion de transients y BPM",
+  "unity": "2021.3"
 }
