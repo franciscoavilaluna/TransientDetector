@@ -1,10 +1,22 @@
+using UnityEngine;
+
 namespace AudioBeatDetector
 {
-    public class TransientDetector
+    public class TransientDetector : MonoBehaviour
     {
-        public static float[] AnalyzeTransients(float[] audioSamples, int sampleRate)
+        public AudioClip song;
+
+        void Start()
         {
-            return new float[0];
+            int indexStart = 0;
+            int windowSize = 2048;
+            float[] window = new float[windowSize];
+            while (indexStart + windowSize <= song.samples)
+            {
+                song.GetData(window, indexStart);
+                indexStart += windowSize / 2;
+            }
+            Debug.Log("Values for window: " + window[0]);
         }
     }
 }
