@@ -1,6 +1,7 @@
 using UnityEngine;
 using MathNet.Numerics.IntegralTransforms;
 using System.Numerics;
+using System.Collections.Generic;
 
 namespace AudioBeatDetector
 {
@@ -15,6 +16,9 @@ namespace AudioBeatDetector
             float[] window = new float[windowSize];
             Complex[] complexBuffer = new Complex[windowSize];
             float previousBassMagnitude = 0f;
+            float sensitivity = 1.3f;
+            float backgroundNoise = 0.1f;
+            Queue<float> fluxHistory = new Queue<float>();
 
             while (indexStart + windowSize <= song.samples)
             {
@@ -40,9 +44,41 @@ namespace AudioBeatDetector
                     bassMagnitude += (float)complexBuffer[k].Magnitude;
                 }
                 
+                // spectral flux
                 float flux = bassMagnitude - previousBassMagnitude;
                 float spectralFlux = Mathf.Max(0, flux);
                 previousBassMagnitude = bassMagnitude;
+
+                // dynamic average
+                float totalSum = 0f;
+                float average = 0f;
+                foreach (float k in fluxHistory)
+                {
+                    totalSum += k;
+                }
+
+                if (fluxHistory.Count > 0)
+                {
+                    average = totalSum / fluxHistory.Count;
+                }
+                else
+                {
+                    average = 0f;
+                }
+
+                float threshold = average * sensitivity;
+
+                if (spectralFlux > threshold && spectralFlux > backgroundNoise)
+                {
+                    Debug.Log("BEAT on sample: " + indexStart);
+                }
+
+                fluxHistory.Enqueue(spectralFlux);
+
+                if (fluxHistory.Count > 15)
+                {
+                    fluxHistory.Dequeue();
+                }
             }
             Debug.Log("Values for window: " + window[0]);
         }
