@@ -7,9 +7,7 @@ namespace AudioBeatDetector
 {
     public class TransientDetector : MonoBehaviour
     {
-        public AudioClip song;
-
-        void Start()
+        public List<float> AnalyzeAudio(AudioClip song)
         {
             int indexStart = 0;
             int windowSize = 2048;
@@ -19,6 +17,7 @@ namespace AudioBeatDetector
             float sensitivity = 1.3f;
             float backgroundNoise = 0.1f;
             Queue<float> fluxHistory = new Queue<float>();
+            List<float> beatTimes = new List<float>();
 
             while (indexStart + windowSize <= song.samples)
             {
@@ -70,7 +69,9 @@ namespace AudioBeatDetector
 
                 if (spectralFlux > threshold && spectralFlux > backgroundNoise)
                 {
-                    Debug.Log("BEAT on sample: " + indexStart);
+                    // Debug.Log("BEAT on sample: " + indexStart);
+                    float t = (float)indexStart / song.frequency;
+                    beatTimes.Add(t);
                 }
 
                 fluxHistory.Enqueue(spectralFlux);
@@ -79,8 +80,10 @@ namespace AudioBeatDetector
                 {
                     fluxHistory.Dequeue();
                 }
+
             }
-            Debug.Log("Values for window: " + window[0]);
+            return beatTimes;
+            //Debug.Log("Values for window: " + window[0]);
         }
     }
 }
