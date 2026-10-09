@@ -36,7 +36,7 @@ namespace AudioBeatDetector
                     complexBuffer[i] = new Complex(window[i], 0.0);
                 }
 
-                Fourier.Forward(complexBuffer, FourierOptions.Asymmetric);
+                Fourier.Forward(complexBuffer, FourierOptions.AsymmetricScaling);
 
                 for (int k = 1; k <= 7; k++)
                 {
