@@ -19,6 +19,10 @@ namespace AudioBeatDetector
         public float noiseFloor = 0.08f;
         public float minInterval = 0.10f;
 
+        public BandSettings()
+        {
+        }
+
         public BandSettings(string name, float lowHz, float highHz, float delta, float noiseFloor, float minInterval)
         {
             this.name = name;
@@ -41,17 +45,116 @@ namespace AudioBeatDetector
         public bool refineOnsets = true;
         public bool localNormalization = true;
         public float localWindowSeconds = 3f;
-        public float localFloor = 0.35f;
+        public float localFloor = 0.0001f;
         public BandSettings kick;
         public BandSettings snare;
 
         public DetectorSettings()
         {
-            kick = new BandSettings("kick", 40f, 110f, 0.15f, 0.08f, 0.10f);
+            kick = new BandSettings("kick", 40f, 110f, 0.6f, 0.08f, 0.10f);
             kick.fftSize = 4096;
             kick.vibratoSuppression = true;
 
-            snare = new BandSettings("snare", 1500f, 5000f, 0.15f, 0.08f, 0.12f);
+            snare = new BandSettings("snare", 1500f, 5000f, 0.6f, 0.08f, 0.12f);
+        }
+
+        public void Validate(int sampleRate)
+        {
+            if (sampleRate <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(sampleRate), "sampleRate must be greater than zero.");
+            }
+
+            if (hopSize <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(hopSize), "hopSize must be greater than zero.");
+            }
+
+            if (!IsFinite(logGamma) || logGamma <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(logGamma), "logGamma must be finite and greater than zero.");
+            }
+
+            if (medianRadius < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(medianRadius), "medianRadius must be at least 1.");
+            }
+
+            if (peakRadius < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(peakRadius), "peakRadius must be at least 1.");
+            }
+
+            if (!IsFinite(localWindowSeconds) || localWindowSeconds <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(localWindowSeconds), "localWindowSeconds must be finite and greater than zero.");
+            }
+
+            if (!IsFinite(localFloor) || localFloor <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(localFloor), "localFloor must be finite and greater than zero.");
+            }
+
+            if (!IsFinite(timeOffset))
+            {
+                throw new ArgumentOutOfRangeException(nameof(timeOffset), "timeOffset must be finite.");
+            }
+
+            ValidateBand(kick, nameof(kick), sampleRate);
+            ValidateBand(snare, nameof(snare), sampleRate);
+
+            if (hopSize > kick.fftSize || hopSize > snare.fftSize)
+            {
+                throw new ArgumentOutOfRangeException(nameof(hopSize), "hopSize must not be greater than any band fftSize.");
+            }
+        }
+
+        static void ValidateBand(BandSettings band, string paramName, int sampleRate)
+        {
+            if (band == null)
+            {
+                throw new ArgumentNullException(paramName);
+            }
+
+            if (band.fftSize < 16 || (band.fftSize & 1) != 0)
+            {
+                throw new ArgumentOutOfRangeException(paramName + ".fftSize", "fftSize must be an even number greater than or equal to 16.");
+            }
+
+            if (!IsFinite(band.lowHz) || band.lowHz <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(paramName + ".lowHz", "lowHz must be finite and greater than zero.");
+            }
+
+            if (!IsFinite(band.highHz) || band.highHz <= band.lowHz)
+            {
+                throw new ArgumentOutOfRangeException(paramName + ".highHz", "highHz must be finite and greater than lowHz.");
+            }
+
+            if (band.highHz >= sampleRate * 0.5f)
+            {
+                throw new ArgumentOutOfRangeException(paramName + ".highHz", "highHz must be below the Nyquist frequency.");
+            }
+
+            if (!IsFinite(band.delta) || band.delta < 0f)
+            {
+                throw new ArgumentOutOfRangeException(paramName + ".delta", "delta must be finite and non-negative.");
+            }
+
+            if (!IsFinite(band.noiseFloor) || band.noiseFloor < 0f)
+            {
+                throw new ArgumentOutOfRangeException(paramName + ".noiseFloor", "noiseFloor must be finite and non-negative.");
+            }
+
+            if (!IsFinite(band.minInterval) || band.minInterval < 0f)
+            {
+                throw new ArgumentOutOfRangeException(paramName + ".minInterval", "minInterval must be finite and non-negative.");
+            }
+        }
+
+        static bool IsFinite(float value)
+        {
+            return !float.IsNaN(value) && !float.IsInfinity(value);
         }
     }
 
@@ -60,11 +163,11 @@ namespace AudioBeatDetector
         public List<float> kickBeats = new List<float>();
         public List<float> snareBeats = new List<float>();
 
-        public float[] frameTimes;
-        public float[] kickFlux;
-        public float[] kickThreshold;
-        public float[] snareFlux;
-        public float[] snareThreshold;
+        public float[] frameTimes = Array.Empty<float>();
+        public float[] kickFlux = Array.Empty<float>();
+        public float[] kickThreshold = Array.Empty<float>();
+        public float[] snareFlux = Array.Empty<float>();
+        public float[] snareThreshold = Array.Empty<float>();
     }
 
     public static class TransientDetector
@@ -76,6 +179,11 @@ namespace AudioBeatDetector
 
         public static BeatMap AnalyzeAudio(AudioClip song, DetectorSettings settings)
         {
+            if (settings == null)
+            {
+                settings = new DetectorSettings();
+            }
+
             float[] mono = ToMono(song);
             return Analyze(mono, song.frequency, settings);
         }
@@ -90,7 +198,7 @@ namespace AudioBeatDetector
             float[] mono = ToMono(song);
             int sampleRate = song.frequency;
 
-            BeatMap result = await Task.Run(() => Analyze(mono, sampleRate, settings));
+            BeatMap result = await Task.Run(() => Analyze(mono, sampleRate, settings)).ConfigureAwait(false);
             return result;
         }
 
@@ -147,20 +255,41 @@ namespace AudioBeatDetector
 
         public static BeatMap Analyze(float[] mono, int sampleRate, DetectorSettings settings)
         {
-            BeatMap map = new BeatMap();
-            int hop = settings.hopSize;
+            if (mono == null)
+            {
+                throw new ArgumentNullException(nameof(mono));
+            }
 
-            if (mono == null || mono.Length < 4 * hop)
+            if (settings == null)
+            {
+                throw new ArgumentNullException(nameof(settings));
+            }
+
+            settings.Validate(sampleRate);
+
+            BeatMap map = new BeatMap();
+
+            if (mono.Length == 0)
             {
                 return map;
             }
 
-            int frames = mono.Length / hop + 1;
+            Sanitize(mono);
+
+            int hop = settings.hopSize;
+            int maxFft = Math.Max(settings.kick.fftSize, settings.snare.fftSize);
+
+            if (mono.Length < maxFft)
+            {
+                return map;
+            }
+
+            int frames = (mono.Length - maxFft) / hop + 1;
             float[] times = new float[frames];
 
             for (int f = 0; f < frames; f++)
             {
-                times[f] = (float)((double)f * hop / sampleRate) + settings.timeOffset;
+                times[f] = (float)(((double)f * hop + maxFft * 0.5) / sampleRate) + settings.timeOffset;
             }
 
             BandSettings[] bands = new BandSettings[2];
@@ -169,7 +298,7 @@ namespace AudioBeatDetector
 
             for (int b = 0; b < 2; b++)
             {
-                float[] flux = BandFlux(mono, sampleRate, hop, frames, bands[b], settings.logGamma);
+                float[] flux = BandFlux(mono, sampleRate, hop, frames, bands[b], settings.logGamma, maxFft);
 
                 if (settings.localNormalization)
                 {
@@ -206,7 +335,7 @@ namespace AudioBeatDetector
             return map;
         }
 
-        static float[] BandFlux(float[] mono, int sampleRate, int hop, int frames, BandSettings band, float gamma)
+        static float[] BandFlux(float[] mono, int sampleRate, int hop, int frames, BandSettings band, float gamma, int maxFft)
         {
             int n = band.fftSize;
             int half = n / 2;
@@ -229,7 +358,7 @@ namespace AudioBeatDetector
 
             for (int f = 0; f < frames; f++)
             {
-                int start = f * hop - n / 2;
+                int start = f * hop + (maxFft - n) / 2;
 
                 for (int i = 0; i < n; i++)
                 {
@@ -283,6 +412,19 @@ namespace AudioBeatDetector
             return flux;
         }
 
+        static void Sanitize(float[] data)
+        {
+            for (int i = 0; i < data.Length; i++)
+            {
+                float value = data[i];
+
+                if (float.IsNaN(value) || float.IsInfinity(value))
+                {
+                    data[i] = 0f;
+                }
+            }
+        }
+
         static int ClampInt(int value, int min, int max)
         {
             if (value < min)
@@ -323,9 +465,13 @@ namespace AudioBeatDetector
 
         static void NormalizeLocal(float[] flux, int radius, float floorValue)
         {
-            Normalize(flux);
-
             int count = flux.Length;
+
+            if (count == 0)
+            {
+                return;
+            }
+
             int stride = Math.Max(1, radius / 8);
             int anchorCount = count / stride + 2;
             float[] scale = new float[anchorCount];
@@ -335,27 +481,21 @@ namespace AudioBeatDetector
                 int center = a * stride;
                 int first = Math.Max(0, center - radius);
                 int last = Math.Min(count - 1, center + radius);
-                float peak = 0f;
+                double sum = 0.0;
 
                 for (int i = first; i <= last; i++)
                 {
-                    if (flux[i] > peak)
-                    {
-                        peak = flux[i];
-                    }
+                    sum += flux[i];
                 }
 
-                if (peak < floorValue)
+                float local = (float)(sum / (last - first + 1));
+
+                if (float.IsNaN(local) || float.IsInfinity(local) || local < floorValue)
                 {
-                    peak = floorValue;
+                    local = floorValue;
                 }
 
-                if (peak > 1f)
-                {
-                    peak = 1f;
-                }
-
-                scale[a] = peak;
+                scale[a] = local;
             }
 
             for (int i = 0; i < count; i++)

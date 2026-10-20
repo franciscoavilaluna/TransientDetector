@@ -3,15 +3,16 @@
 ## Estado actual (2026-10-20)
 
 - Rama de trabajo: `chore/package-p0`
-- Fase 1 completada: commit `3bc698e` — *Fix Unity package dependency and clean build artifacts*
-- Tag: `v1.1.0` (apunta a `3bc698e`)
 - `main` no se tocó: sigue en `7d501cb`
-- Verificado en Unity 6 desde un clon limpio de solo lo commiteado:
-  - El paquete se instala como `file:` y compila sin errores.
-  - `MathNet.Numerics.dll` está vendorizado en `Runtime/Plugins`.
-  - Smoke test: `SMOKE: kick=8 snare=15`.
+- Fase 1: commit `3bc698e` — paquete compilando en Unity, MathNet vendorizado
+- Fase 2/3: validación, robustez, bordes y normalización
+- Tests EditMode: **13/13 pasan** en Unity 6
+- Tono puro 440 Hz: **0 kicks, 0 snares** (falso positivo corregido)
+- `hopSize = 0`: lanza `ArgumentOutOfRangeException` (ya no `DivideByZeroException`)
+- WAV estéreo con kick/snare/pad: sin excepciones y detecta kicks
+- `Runtime/` existe en `Library/PackageCache/...`, no en la carpeta física `Packages/`
 
-## Cómo retomar mañana
+## Cómo retomar
 
 ```bash
 cd /home/pacosmosis/docs/projects/TransientDetector
@@ -24,34 +25,60 @@ git log --oneline -5
 
 Prompt para pegar en pi:
 
-> Continuamos con TransientDetector. Estamos en la rama `chore/package-p0`, Fase 1 en `3bc698e`, tag `v1.1.0`. La Fase 1 está terminada y verificada. Sigue con la Fase 2 (validación de settings, NaN/Inf, null-checks y tests) y la Fase 3 (bordes y normalización). No hagas merge a `main` ni push sin confirmármelo.
+> Continuamos con TransientDetector. Estamos en `chore/package-p0`. Fases 1–3 terminadas y tests 13/13. Sigue con la Fase 4 (BeatEvent con fuerza, multi-banda, full-band e hi-hat), luego Fase 5 (BPM/beat grid/downbeats) y Fase 6 (BeatMapPlayer/latencia/caché). No hagas merge a `main` ni push sin confirmármelo.
 
 ## Siguiente trabajo
 
-### Fase 2 — Validación y robustez
+### Fase 4 — Modelo de beats
 
-- Añadir `DetectorSettings.Validate()`.
-- Validar `hopSize`, `fftSize`, `sampleRate`, bandas, radios, `localFloor`, `logGamma`, `delta`, `noiseFloor` y `minInterval`.
-- Sanitizar `NaN`/`Infinity` en muestras y flujo.
-- Inicializar `BeatMap` vacío en vez de dejar arrays null.
-- Null-checks consistentes en las versiones sync y async.
-- Tests de settings inválidos.
+- `BeatEvent` con tiempo, fuerza y banda.
+- `BeatMap` multi-banda con `BandResult[]`.
+- Banda full-band y banda de hi-hat.
+- Evitar que el ataque del kick dispare la banda de snare.
+- Timeline combinada de onsets.
 
-### Fase 3 — Bordes y normalización
+### Fase 5 — BPM y grid musical
 
-- Analizar solo frames completos (o usar padding reflejado).
-- Evitar que el percentil 98 amplifique ruido numérico.
-- Arreglar `NormalizeLocal`: no recortar el pico local a 1.
-- Usar un umbral robusto mediana + MAD con un floor.
-- Tests: tono puro, silencio, ruido blanco y clicks con rango dinámico.
+- Estimación de BPM por autocorrelación/comb filter.
+- Fase del beat y grid estable.
+- Downbeats/compases.
+- Cuantización a 1/4, 1/8 y 1/16.
+
+### Fase 6 — Runtime
+
+- `BeatMapPlayer`/`Conductor` con `AudioSettings.dspTime`.
+- Calibración de latencia.
+- Eventos, pausa y seek.
+- Caché del análisis en JSON o ScriptableObject.
+
+### Fase 7 — Rendimiento y memoria
+
+- Resample a 22050 Hz.
+- Reutilizar buffers en `OnsetRefiner`.
+- `CancellationToken` e `IProgress<float>`.
+- Lectura por chunks.
+
+### Fase 8 — FFT propia
+
+- Quitar MathNet definitivamente.
+- Tests contra la FFT actual.
+- Verificar IL2CPP.
+
+### Fase 9 — Repo y calidad
+
+- Samples/demo.
+- Editor window para visualizar beats.
+- CI con tests.
+- Probar Unity 2021.3 LTS.
+- GitHub Release.
 
 ## Problemas conocidos
 
-- Un tono puro de 440 Hz genera falsos positivos (~7 kicks/s).
-- `hopSize = 0` lanza `DivideByZeroException`.
 - La banda de snare detecta kicks por el contenido broadband del ataque.
 - Todavía no hay BPM, beat grid ni downbeats.
 - Solo probado en Unity 6; falta Unity 2021.3 LTS.
+- WebGL no probado.
+- El análisis de canciones largas usa bastante memoria.
 
 ## Verificación rápida
 
@@ -60,4 +87,15 @@ cd /home/pacosmosis/docs/projects/TransientDetector
 dotnet build "Tools~/AudioBeatDetector.csproj" -v q
 ```
 
-Para Unity: crear un proyecto limpio, añadir el paquete como `file:` y ejecutar el smoke test de `Assets/Editor/DetectorSmokeTest.cs`.
+Tests en Unity:
+
+```bash
+UNITY=/home/pacosmosis/docs/Unity/Hub/Editor/6000.6.3f1/Editor/Unity
+"$UNITY" -batchmode -nographics \
+  -projectPath /tmp/TransientDetectorTest \
+  -runTests -testPlatform EditMode \
+  -testResults /tmp/td-tests.xml \
+  -logFile /tmp/td-tests.log
+```
+
+El resultado debe ser `passed="13" failed="0"`.

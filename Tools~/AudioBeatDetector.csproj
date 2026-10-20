@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../Runtime/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>/home/pacosmosis/docs/Unity/Hub/Editor/6000.6.3f1/Editor/Data/Managed/UnityEngine/UnityEngine.CoreModule.dll</HintPath>
     </Reference>
