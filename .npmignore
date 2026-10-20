@@ -1,0 +1,12 @@
+Tools~/
+bin/
+obj/
+[Ll]ibrary/
+[Tt]emp/
+[Ll]ogs/
+[Uu]serSettings/
+.git/
+.github/
+*.csproj
+*.slnx
+*.user

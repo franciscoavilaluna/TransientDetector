@@ -1,11 +1,22 @@
 {
   "name": "com.franciscoavilaluna.transientdetector",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "displayName": "Audio Beat and Transient Detector",
-  "description": "Transients detection library",
+  "description": "Onset and transient detection for Unity. Spectral flux kick/snare detection and onset refinement for generative rhythm games.",
   "unity": "2021.3",
+  "keywords": [
+    "audio",
+    "beat",
+    "onset",
+    "transient",
+    "rhythm",
+    "dsp"
+  ],
   "author": {
     "name": "Francisco Avila Luna",
     "url": "https://github.com/franciscoavilaluna"
-  }
+  },
+  "documentationUrl": "https://github.com/franciscoavilaluna/TransientDetector#readme",
+  "changelogUrl": "https://github.com/franciscoavilaluna/TransientDetector/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/franciscoavilaluna/TransientDetector/blob/main/LICENSE"
 }
