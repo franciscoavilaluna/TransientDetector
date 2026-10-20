@@ -1,6 +1,6 @@
 {
   "name": "com.franciscoavilaluna.transientdetector",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "displayName": "Audio Beat and Transient Detector",
   "description": "Onset, beat and tempo analysis for Unity: spectral-flux multi-band detection, BPM/beat grid/downbeats, quantization, runtime conductor and JSON caching for generative rhythm games.",
   "unity": "2021.3",

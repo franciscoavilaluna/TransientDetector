@@ -19,9 +19,10 @@ namespace AudioBeatDetector
             float bestScore = 0f;
             float bestBpm = 0f;
             float bestPhase = 0f;
+            int bestMatched = -1;
             var histogram = new float[PhaseBins];
 
-            for (float bpm = settings.minBpm; bpm <= settings.maxBpm; bpm += 0.25f)
+            for (float bpm = settings.minBpm; bpm <= settings.maxBpm; bpm += 0.5f)
             {
                 float period = 60f / bpm;
                 Array.Clear(histogram, 0, PhaseBins);
@@ -119,15 +120,18 @@ namespace AudioBeatDetector
                 double prior = Math.Exp(-0.5 * x * x);
                 float score = concentration * coverage * (float)prior;
 
-                if (score > bestScore)
+                bool nearTie = bestBpm > 0f && score >= bestScore * 0.99f;
+
+                if (score > bestScore || (nearTie && matched > bestMatched))
                 {
                     bestScore = score;
                     bestBpm = bpm;
                     bestPhase = firstBeat;
+                    bestMatched = matched;
                 }
             }
 
-            if (bestBpm <= 0f || bestScore < 0.05f)
+            if (bestBpm <= 0f || bestScore < 0.01f)
             {
                 return;
             }

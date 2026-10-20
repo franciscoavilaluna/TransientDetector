@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-10-20
+
+### Fixed
+
+- Tempo estimation on real music: lower acceptance threshold, 0.5 BPM search resolution and a near-tie tie-break based on explained onsets.
+- Verified on real tracks: Get Lucky (116 BPM), Smells Like Teen Spirit (115.5), Psycho Killer (123), SICKO MODE (155).
+- Synthetic 60/90/120/150/180 BPM tracks, 16th-note hats, silence and pure tones still pass.
+
 ## [2.0.0] - 2026-10-20
 
 ### Added
