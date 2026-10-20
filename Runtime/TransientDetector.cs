@@ -19,10 +19,6 @@ namespace AudioBeatDetector
         public float noiseFloor = 0.08f;
         public float minInterval = 0.10f;
 
-        public BandSettings()
-        {
-        }
-
         public BandSettings(string name, float lowHz, float highHz, float delta, float noiseFloor, float minInterval)
         {
             this.name = name;
@@ -42,6 +38,10 @@ namespace AudioBeatDetector
         public int medianRadius = 8;
         public int peakRadius = 3;
         public float timeOffset = 0f;
+        public bool refineOnsets = true;
+        public bool localNormalization = true;
+        public float localWindowSeconds = 3f;
+        public float localFloor = 0.35f;
         public BandSettings kick;
         public BandSettings snare;
 
@@ -170,9 +170,23 @@ namespace AudioBeatDetector
             for (int b = 0; b < 2; b++)
             {
                 float[] flux = BandFlux(mono, sampleRate, hop, frames, bands[b], settings.logGamma);
-                Normalize(flux);
+
+                if (settings.localNormalization)
+                {
+                    int radiusFrames = Math.Max(8, (int)(settings.localWindowSeconds * sampleRate / hop));
+                    NormalizeLocal(flux, radiusFrames, settings.localFloor);
+                }
+                else
+                {
+                    Normalize(flux);
+                }
                 float[] threshold = LocalMedianThreshold(flux, settings.medianRadius, bands[b].delta);
                 List<float> beats = PickPeaks(flux, threshold, times, bands[b], settings.peakRadius);
+
+                if (settings.refineOnsets)
+                {
+                    beats = OnsetRefiner.Refine(mono, sampleRate, beats, bands[b], settings.timeOffset);
+                }
 
                 if (b == 0)
                 {
@@ -304,6 +318,53 @@ namespace AudioBeatDetector
             for (int i = 0; i < flux.Length; i++)
             {
                 flux[i] = flux[i] * inverse;
+            }
+        }
+
+        static void NormalizeLocal(float[] flux, int radius, float floorValue)
+        {
+            Normalize(flux);
+
+            int count = flux.Length;
+            int stride = Math.Max(1, radius / 8);
+            int anchorCount = count / stride + 2;
+            float[] scale = new float[anchorCount];
+
+            for (int a = 0; a < anchorCount; a++)
+            {
+                int center = a * stride;
+                int first = Math.Max(0, center - radius);
+                int last = Math.Min(count - 1, center + radius);
+                float peak = 0f;
+
+                for (int i = first; i <= last; i++)
+                {
+                    if (flux[i] > peak)
+                    {
+                        peak = flux[i];
+                    }
+                }
+
+                if (peak < floorValue)
+                {
+                    peak = floorValue;
+                }
+
+                if (peak > 1f)
+                {
+                    peak = 1f;
+                }
+
+                scale[a] = peak;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                float position = (float)i / stride;
+                int lower = (int)position;
+                float fraction = position - lower;
+                float local = scale[lower] * (1f - fraction) + scale[lower + 1] * fraction;
+                flux[i] = flux[i] / local;
             }
         }
 
