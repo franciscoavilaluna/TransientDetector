@@ -121,7 +121,7 @@ The package includes EditMode tests. In a consuming project:
 
 The suite covers silence, kick/snare/hat tracks, dynamic range, pure tones, tempo from 60 to 180 BPM, 16th-note hi-hats, quantization, the conductor, JSON/cache round-trips, FFT correctness against a direct DFT, cancellation and progress.
 
-A CI-ready Unity project lives in `Tests~/UnityProject`.
+A CI-ready Unity project lives in `Tests~/UnityProject`. The GitHub Actions workflow uses Unity 2021.3 LTS via `game-ci/unity-test-runner` and requires a `UNITY_LICENSE` repository secret.
 
 ## Where is the package installed?
 
@@ -153,7 +153,7 @@ If you use a local `file:` dependency, it stays in the referenced folder instead
 - Long clips use significant memory; analyze them on a loading screen and cache the result.
 - At sample rates below 32 kHz, lower `full.highHz` and `hat.highHz` below the Nyquist frequency or disable those bands; otherwise validation throws.
 - WebGL is not supported for threaded analysis. The synchronous `Analyze` path can be used on small clips, but it blocks the main thread.
-- Unity 2021.3 LTS compatibility is covered by the CI project, but local verification in this repository was done on Unity 6.
+- The CI workflow is configured for Unity 2021.3 LTS. Local verification in this repository was done on Unity 6; running CI requires a `UNITY_LICENSE` secret.
 
 ## Architecture
 
