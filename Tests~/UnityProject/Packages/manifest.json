@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "com.unity.modules.audio": "1.0.0",
+    "com.unity.modules.imgui": "1.0.0",
+    "com.unity.modules.jsonserialize": "1.0.0",
+    "com.unity.modules.ui": "1.0.0",
+    "com.unity.modules.uielements": "1.0.0",
+    "com.unity.test-framework": "1.1.33",
+    "com.franciscoavilaluna.transientdetector": "file:../.."
+  },
+  "testables": [
+    "com.franciscoavilaluna.transientdetector"
+  ]
+}

@@ -4,7 +4,7 @@
     <LangVersion>9.0</LangVersion>
     <RootNamespace>AudioBeatDetector</RootNamespace>
     <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <Nullable>disable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,11 +19,12 @@
     <Reference Include="UnityEngine.AudioModule">
       <HintPath>/home/pacosmosis/docs/Unity/Hub/Editor/6000.6.3f1/Editor/Data/Managed/UnityEngine/UnityEngine.AudioModule.dll</HintPath>
     </Reference>
+
+    <Reference Include="UnityEngine.JSONSerializeModule">
+      <HintPath>/home/pacosmosis/docs/Unity/Hub/Editor/6000.6.3f1/Editor/Data/Managed/UnityEngine/UnityEngine.JSONSerializeModule.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
-  </ItemGroup>
 
 
 </Project>

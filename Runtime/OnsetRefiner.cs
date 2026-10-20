@@ -5,24 +5,32 @@ namespace AudioBeatDetector
 {
     public static class OnsetRefiner
     {
-        public static List<float> Refine(float[] mono, int sampleRate, List<float> beats, BandSettings band, float timeOffset)
+        public static List<BeatEvent> Refine(
+            float[] mono,
+            int sampleRate,
+            List<BeatEvent> beats,
+            BandSettings band,
+            float timeOffset,
+            float[] envelope,
+            float[] lowBuffer)
         {
-            List<float> result = new List<float>();
+            var result = new List<BeatEvent>(beats.Count);
 
             if (beats.Count == 0)
             {
                 return result;
             }
 
-            float[] envelope = BuildEnvelope(mono, sampleRate, band);
+            BuildEnvelope(mono, sampleRate, band, envelope, lowBuffer);
 
             int slopeSpan = Math.Max(2, (int)(0.004f * sampleRate));
             int searchBefore = (int)(0.01f * sampleRate);
-            int searchAfter = (int)(0.6f * band.fftSize);
+            int searchAfter = Math.Max(1, (int)(0.04f * sampleRate));
 
-            foreach (float time in beats)
+            for (int b = 0; b < beats.Count; b++)
             {
-                int center = (int)((time - timeOffset) * sampleRate);
+                BeatEvent beat = beats[b];
+                int center = (int)((beat.time - timeOffset) * sampleRate);
                 int first = Math.Max(slopeSpan, center - searchBefore);
                 int last = Math.Min(envelope.Length - 1, center + searchAfter);
 
@@ -42,25 +50,40 @@ namespace AudioBeatDetector
 
                 if (bestIndex < 0)
                 {
-                    result.Add(time);
+                    result.Add(new BeatEvent(beat.time, beat.strength, beat.band));
                     continue;
                 }
 
                 float refined = (float)(bestIndex - slopeSpan / 2) / sampleRate + timeOffset;
-                result.Add(refined);
+                result.Add(new BeatEvent(refined, beat.strength, beat.band));
             }
 
-            result.Sort();
-            return result;
+            result.Sort((a, b) => a.time.CompareTo(b.time));
+
+            if (result.Count < 2)
+            {
+                return result;
+            }
+
+            var deduped = new List<BeatEvent>(result.Count);
+            deduped.Add(result[0]);
+
+            for (int i = 1; i < result.Count; i++)
+            {
+                if (result[i].time - deduped[deduped.Count - 1].time > 0.001f)
+                {
+                    deduped.Add(result[i]);
+                }
+            }
+
+            return deduped;
         }
 
-        static float[] BuildEnvelope(float[] mono, int sampleRate, BandSettings band)
+        static void BuildEnvelope(float[] mono, int sampleRate, BandSettings band, float[] high, float[] low)
         {
-            float[] high = new float[mono.Length];
             Array.Copy(mono, high, mono.Length);
             OnePole(high, sampleRate, band.highHz, 2);
 
-            float[] low = new float[mono.Length];
             Array.Copy(mono, low, mono.Length);
             OnePole(low, sampleRate, band.lowHz, 2);
 
@@ -78,7 +101,6 @@ namespace AudioBeatDetector
 
             float smoothHz = Math.Min(band.highHz * 0.5f, 300f);
             OnePole(high, sampleRate, smoothHz, 1);
-            return high;
         }
 
         static void OnePole(float[] data, int sampleRate, float cutoff, int passes)

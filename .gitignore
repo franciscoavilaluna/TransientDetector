@@ -31,3 +31,7 @@ obj/
 
 # Unity generated
 sysinfo.txt
+
+Tests~/UnityProject/Packages/packages-lock.json
+
+test-results/

@@ -3,14 +3,15 @@
 ## Estado actual (2026-10-20)
 
 - Rama de trabajo: `chore/package-p0`
-- `main` no se tocó: sigue en `7d501cb`
-- Fase 1: commit `3bc698e` — paquete compilando en Unity, MathNet vendorizado
-- Fase 2/3: validación, robustez, bordes y normalización
-- Tests EditMode: **13/13 pasan** en Unity 6
-- Tono puro 440 Hz: **0 kicks, 0 snares** (falso positivo corregido)
-- `hopSize = 0`: lanza `ArgumentOutOfRangeException` (ya no `DivideByZeroException`)
-- WAV estéreo con kick/snare/pad: sin excepciones y detecta kicks
-- `Runtime/` existe en `Library/PackageCache/...`, no en la carpeta física `Packages/`
+- `main` no se tocó.
+- Fases 1–9 implementadas.
+- Versión del paquete: `2.0.0`.
+- Tests EditMode: **27/27 pasan** en Unity 6.
+- Paquete sin dependencias externas de DSP: FFT propia, sin MathNet.
+- CI preparado para Unity 2021.3 en `.github/workflows/ci.yml`.
+- Proyecto de tests: `Tests~/UnityProject`.
+- Editor window: `Window > Audio Beat Detector > Beat Analysis`.
+- Sample: `Samples~/Demo`.
 
 ## Cómo retomar
 
@@ -25,60 +26,54 @@ git log --oneline -5
 
 Prompt para pegar en pi:
 
-> Continuamos con TransientDetector. Estamos en `chore/package-p0`. Fases 1–3 terminadas y tests 13/13. Sigue con la Fase 4 (BeatEvent con fuerza, multi-banda, full-band e hi-hat), luego Fase 5 (BPM/beat grid/downbeats) y Fase 6 (BeatMapPlayer/latencia/caché). No hagas merge a `main` ni push sin confirmármelo.
+> Continuamos con TransientDetector. Estamos en `chore/package-p0`. Fases 1–9 terminadas, tests 27/27 y paquete 2.0.0. Revisa el estado, corre los tests y ayúdame con la integración en el juego / tuning con música real. No hagas merge a `main` ni push sin confirmármelo.
 
-## Siguiente trabajo
+## Qué incluye 2.0.0
 
-### Fase 4 — Modelo de beats
+### Análisis
 
+- Bandas kick, snare, hi-hat y full-band.
 - `BeatEvent` con tiempo, fuerza y banda.
-- `BeatMap` multi-banda con `BandResult[]`.
-- Banda full-band y banda de hi-hat.
-- Evitar que el ataque del kick dispare la banda de snare.
-- Timeline combinada de onsets.
+- `BeatMap` con `onsets`, `beats`, `beatGrid`, `downbeats`, `bands`, `bpm`, `tempoConfidence`, `energy`, `duration`, `sampleRate`, `firstBeatTime`, `beatPeriod`.
+- `QuantizeTime`, `GetBeatIndex`, `GetBeatTime`.
+- BPM, grid y downbeats 4/4.
+- FFT propia radix-2.
+- Cancelación, progreso y lectura de audio multicanal por chunks.
 
-### Fase 5 — BPM y grid musical
+### Runtime
 
-- Estimación de BPM por autocorrelación/comb filter.
-- Fase del beat y grid estable.
-- Downbeats/compases.
-- Cuantización a 1/4, 1/8 y 1/16.
+- `Conductor` con offsets de latencia.
+- `BeatMapPlayer` con `AudioSettings.dspTime`.
+- `BeatMapCache` con JSON y archivos.
+- `BeatMapAsset` para guardar análisis como asset.
 
-### Fase 6 — Runtime
+### Editor y samples
 
-- `BeatMapPlayer`/`Conductor` con `AudioSettings.dspTime`.
-- Calibración de latencia.
-- Eventos, pausa y seek.
-- Caché del análisis en JSON o ScriptableObject.
+- Ventana de análisis con waveform, onsets, beats y downbeats.
+- `Samples~/Demo/BeatDemo.cs`.
 
-### Fase 7 — Rendimiento y memoria
+### Tests y CI
 
-- Resample a 22050 Hz.
-- Reutilizar buffers en `OnsetRefiner`.
-- `CancellationToken` e `IProgress<float>`.
-- Lectura por chunks.
+- 27 tests EditMode.
+- `Tests~/UnityProject` para CI.
+- GitHub Actions con `game-ci/unity-test-runner` (requiere `UNITY_LICENSE`).
 
-### Fase 8 — FFT propia
+## Pendiente recomendado
 
-- Quitar MathNet definitivamente.
-- Tests contra la FFT actual.
-- Verificar IL2CPP.
+1. Probar con música real de distintos géneros y ajustar `delta`, `minInterval`, bandas y prior de tempo.
+2. Verificar el CI de Unity 2021.3 con `UNITY_LICENSE`.
+3. Probar IL2CPP y builds standalone.
+4. Evaluar WebGL: el análisis con hilos no está soportado; usar la ruta síncrona solo en clips cortos.
+5. Integrar el `BeatMap` en el generador de niveles del juego.
+6. Medir rendimiento en móvil y, si hace falta, añadir resampling a 22050 Hz.
 
-### Fase 9 — Repo y calidad
+## Limitaciones conocidas
 
-- Samples/demo.
-- Editor window para visualizar beats.
-- CI con tests.
-- Probar Unity 2021.3 LTS.
-- GitHub Release.
-
-## Problemas conocidos
-
-- La banda de snare detecta kicks por el contenido broadband del ataque.
-- Todavía no hay BPM, beat grid ni downbeats.
-- Solo probado en Unity 6; falta Unity 2021.3 LTS.
-- WebGL no probado.
-- El análisis de canciones largas usa bastante memoria.
+- La banda de snare puede reaccionar al ataque broadband del kick.
+- Tempo asumido mayormente constante; cambios largos de tempo pueden requerir tuning.
+- Sin detector en tiempo real.
+- WebGL no soportado para análisis con hilos.
+- Memoria alta en canciones largas.
 
 ## Verificación rápida
 
@@ -87,7 +82,7 @@ cd /home/pacosmosis/docs/projects/TransientDetector
 dotnet build "Tools~/AudioBeatDetector.csproj" -v q
 ```
 
-Tests en Unity:
+Tests en Unity 6:
 
 ```bash
 UNITY=/home/pacosmosis/docs/Unity/Hub/Editor/6000.6.3f1/Editor/Unity
@@ -98,4 +93,4 @@ UNITY=/home/pacosmosis/docs/Unity/Hub/Editor/6000.6.3f1/Editor/Unity
   -logFile /tmp/td-tests.log
 ```
 
-El resultado debe ser `passed="13" failed="0"`.
+Resultado esperado: `passed="27" failed="0"`.

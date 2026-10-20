@@ -1,14 +1,14 @@
 {
   "name": "com.franciscoavilaluna.transientdetector",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "displayName": "Audio Beat and Transient Detector",
-  "description": "Onset and transient detection for Unity. Spectral flux kick/snare detection and onset refinement for generative rhythm games.",
+  "description": "Onset, beat and tempo analysis for Unity: spectral-flux multi-band detection, BPM/beat grid/downbeats, quantization, runtime conductor and JSON caching for generative rhythm games.",
   "unity": "2021.3",
   "keywords": [
     "audio",
     "beat",
     "onset",
-    "transient",
+    "tempo",
     "rhythm",
     "dsp"
   ],
@@ -18,5 +18,12 @@
   },
   "documentationUrl": "https://github.com/franciscoavilaluna/TransientDetector#readme",
   "changelogUrl": "https://github.com/franciscoavilaluna/TransientDetector/blob/main/CHANGELOG.md",
-  "licensesUrl": "https://github.com/franciscoavilaluna/TransientDetector/blob/main/LICENSE"
+  "licensesUrl": "https://github.com/franciscoavilaluna/TransientDetector/blob/main/LICENSE",
+  "samples": [
+    {
+      "displayName": "Beat Demo",
+      "description": "Analyzes an AudioClip and logs onsets, beats and downbeats.",
+      "path": "Samples~/Demo"
+    }
+  ]
 }
